@@ -74,6 +74,15 @@ $enablevlan = 'External'
 $applicationprofile = 'http'
 $snatpool = 'Snat_Pool'
 
+$checknode = Get-Node -Address $nodeip
+if ($checknode.address -notlike $nodeip ) {
+"No node exsist"
+New-Node -name $nodename -Address $nodeip
+} else {
+$nodename = $checknode.name
+$nodeip = $checknode.address
+"Node is exsist, Using $nodename "
+}
 
 
 
