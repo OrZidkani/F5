@@ -1,4 +1,4 @@
-######F5 PS sevice creationNew service creation####### 
+######F5 PS service creation####### 
 
 #######PS Module verification################
 if (Get-Module -ListAvailable -Name F5-LTM  ) {
@@ -8,21 +8,25 @@ if (Get-Module -ListAvailable -Name F5-LTM  ) {
     Install-Module F5-LTM
 }
 
-########Var#########
+########Login#########
 
-$f5IP = '192.100.100.100'
+$f5IP = '192.168.1.1'
 $f5username = 'admin'
+####################Ask for a password for each run (More secure)
 #$f5password = Read-Host 'Specify F5 Password' -AsSecureString
-###########Put a password for multiple run###############
-$f5password = ConvertTo-SecureString "somepasword" -AsPlainText -Force
 
+###########Put a password for multiple run###############
+$f5password = ConvertTo-SecureString "Password!!@!@!" -AsPlainText -Force
+
+$mycreds = New-Object System.Management.Automation.PSCredential $f5username, $f5password
+New-F5Session -LTMName $f5IP -LTMCredentials $mycreds
 
 
 ###################Application Details#####################
-$virtualservicename = 'www.site1.com'
-$virtualserviceip = '192.168.20.103'
+$virtualservicename = 'www.f5.com'
+$virtualserviceip = '10.10.10.5'
 $virtualserviceport = '443'
-$nodeip = '192.168.10.14'
+$nodeip = '10.10.10.6'
 $nodeport = '443'
 
 
@@ -34,46 +38,43 @@ $nodeport = '443'
 ################################################################################################################
 
 ####################SSL Menu###############
-$autossl = '1'                                                                                             
+$autossl = '1'   
+#######Defualt SSL profile##########
 $clientssl = 'clientssl'                                                                                       
 $serverssl = 'serverssl-secure'  
 
-if ($virtualservicename.IndexOf('www.site1.com') -notlike '-1' -and $autossl -ne '0' ) {
-	$clientssl = $profile1
-	'SSL Profile = profile1'
-} elseif ($virtualservicename.IndexOf('www.site.com') -notlike '-1' -and $autossl -ne '0' ) {
-	$clientssl = $profile2
-	'SSL Profile = profile 2'
-} elseif ($virtualservicename.IndexOf('site3') -notlike '-1' -and $autossl -ne '0' ) {
-	$clientssl = $profile3
-	'SSL Profile = profile 3'
-} elseif ($virtualservicename.IndexOf('site4') -notlike '-1' -and $autossl -ne '0' ) {
-	$clientssl = $profile4
-	SSL Profile = 'profile 4'
-} elseif ($virtualservicename.IndexOf('site5') -notlike '-1' -and $autossl -ne '0' ) {
-	$clientssl = $profile5
-	SSL Profile = 'profile 5'
+if ($virtualservicename.IndexOf('f5.com') -notlike '-1' -and $autossl -ne '0' ) {
+	$clientssl = $wildcard_f5.com
+	'SSL Profile = $wildcard_f5.com'
+} elseif ($virtualservicename.IndexOf('www.test.com') -notlike '-1' -and $autossl -ne '0' ) {
+	$clientssl = $www.test.f5.com
+	'SSL Profile = $www.test.f5.com'
+} elseif ($virtualservicename.IndexOf('test.test.com') -notlike '-1' -and $autossl -ne '0' ) {
+	$clientssl = $test.test.com
+	'SSL Profile = $test.test.com'
 } else {
 "No auto SSL policy found or autossl = 0, Choosen SSL profile: $clientssl "
 }
 
 
 ################SSL Profile choose####################
-$site1 = 'wildcard_site1'
-$ekzssl = 'wildcard_www.site2.com'
-$grandcitypropertyssl = 'wildcard_site3'
-$dslmssl = 'www.site4'
-$ssoaroundtownssl = 'sso.site5'
+####Please use varible = F5 Client SSL profile name#####
 
+$wildcard_f5.com = 'wildcard_f5.com'
+$www.test.f5.com = 'client_profile_www.test.f5.com'
+$test.test.com = 'Client_test.test.com'
 
 
 #################################Enviroment Varibals, Mostly not should being changed################
 $nodename = ( foreach {$virtualservicename +  "_node"} )
 $poolname = ( foreach {$virtualservicename +  "_pool"} )
+
+####################Specify Enabled Vlan,HTTP Profile,Snat Pool##################
 $enablevlan = 'External'
 $applicationprofile = 'http'
 $snatpool = 'Snat_Pool'
 
+############################Check for exsisting node or create a new one if not exsist#################
 $checknode = Get-Node -Address $nodeip
 if ($checknode.address -notlike $nodeip ) {
 "No node exsist"
@@ -85,16 +86,6 @@ $nodeip = $checknode.address
 }
 
 
-
-##########Login################
-
-
-
-$mycreds = New-Object System.Management.Automation.PSCredential $f5username, $f5password
-New-F5Session -LTMName $f5IP -LTMCredentials $mycreds
-
-########Node creation#############
-New-Node -name $nodename -Address $nodeip
 
 
 
@@ -111,3 +102,6 @@ Add-PoolMember -PoolName $poolname -Name $nodename -PortNumber $nodeport -Status
 ##################Virtual Virtual Service configuration####################
 
  New-VirtualServer -Name $virtualservicename -DestinationIP $virtualserviceip -DestinationPort $virtualserviceport  -ipProtocol tcp -DefaultPool $poolname -enabled true -SourceAddressTranslationType snat -SourceAddressTranslationPool $snatpool -VlanEnabled $enablevlan -ProfileNames $applicationprofile , $clientssl , $serverssl
+
+
+
