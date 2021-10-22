@@ -104,3 +104,32 @@ Add-PoolMember -PoolName $poolname -Name $nodename -PortNumber $nodeport -Status
  New-VirtualServer -Name $virtualservicename -DestinationIP $virtualserviceip -DestinationPort $virtualserviceport  -ipProtocol tcp -DefaultPool $poolname -enabled true -SourceAddressTranslationType snat -SourceAddressTranslationPool $snatpool -VlanEnabled $enablevlan -ProfileNames $applicationprofile , $clientssl , $serverssl
 
 
+#########################################Checkpoint Add Node to backend group###########################
+
+$creds = Get-Credential -UserName "cpuser"
+Open-CheckPointSession -ManagementServer 1.1.1.1 -Credentials $creds 
+
+
+$Gethost = Get-CheckPointHosts -All
+$hostobject = $Gethost | Where-Object { $_.IPv4Address -eq $nodeip} | Select-Object -First 1
+
+$f5cpgroup = Get-CheckPointGroup -Name F5_ASM_Backend_Servers_Group
+$f5cpgroupname = $f5cpgroup.Members
+$f5cpgroupnamemebers = $f5cpgroupname | Where-Object { $_.Name -eq $hostobject} | Select-Object -First 1
+
+
+if (([string]::IsNullOrEmpty($hostobject)))  {
+    'Host is not exist in Checkpoint, Please create it first and then run the script again'
+}elseif (-not([string]::IsNullOrEmpty($f5cpgroupnamemebers ))) {
+      'replace with script'
+'Member is already in group'
+} else {
+    Set-CheckPointGroup -Name $f5cpgroup -MemberAction add -Members $hostobject
+    Publish-CheckPointSession
+    "Adding $hostobject to $f5cpgroup "
+    }                                                          
+
+############Verification#############
+
+Write-Output "The group $f5cpgroup contains host: $f5cpgroupname"
+
